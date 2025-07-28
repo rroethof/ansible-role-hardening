@@ -1,0 +1,24 @@
+---
+#
+# Ansible managed
+#
+parseable: true
+quiet: true
+exclude_paths:
+  - ./meta/preferences.yml
+  - ./molecule/default/prepare.yml
+  - ./molecule/default/converge.yml
+  - ./molecule/default/verify.yml
+  - ./molecule/default/collections.yml
+  - ./.tox
+  - ./.cache
+  - ./.github
+  - ./requirements.yml
+skip_list:
+  - 'role-name'
+  - 'experimental'
+  - 'line-length'
+  - 'package-latest'
+  - 'risky-shell-pipe'
+use_default_rules: true
+verbosity: 0

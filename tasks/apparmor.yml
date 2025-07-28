@@ -1,0 +1,12 @@
+---
+- name: Ensure all AppArmor profiles are in enforce mode
+  ansible.builtin.command: aa-enforce /etc/apparmor.d/*
+  become: true
+  changed_when: false
+  when:
+    - hardening_enforce_apparmor_profiles
+    - ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+  tags:
+    - apparmor
+    - hardening
+    - security

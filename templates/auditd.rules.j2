@@ -1,0 +1,8 @@
+#
+# This file is managed by Ansible.
+#
+# Audit rules for {{ ansible_managed }}
+
+{% for rule in hardening_auditd_rules %}
+{{ rule }}
+{% endfor %}

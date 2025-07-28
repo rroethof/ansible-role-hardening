@@ -1,0 +1,102 @@
+---
+name: Molecule CI for non main and master branches
+'on':
+  pull_request:
+  push:
+    branches:
+      - '**'
+      - '!main'
+
+env:
+  PYTHON_VERSION: '3.x'
+  ANSIBLE_CORE_VERSION: '2.18.7'
+
+defaults:
+  run:
+    working-directory: 'rroethof.hardening'
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          path: 'rroethof.hardening'
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install "ansible-lint[yamllint]" "ansible-core==${{ env.ANSIBLE_CORE_VERSION }}"
+
+      - name: Install Ansible collections
+        run: ansible-galaxy collection install -r collections/requirements.yml
+
+      - name: Run yamllint
+        run: yamllint .
+
+      - name: Run ansible-lint
+        run: ansible-lint
+
+  molecule:
+    name: Molecule
+    needs: [lint]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        distro:
+          - debian12
+      fail-fast: false
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          path: 'rroethof.hardening'
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install "molecule>=5.0" "molecule-plugins[docker]" "ansible-core==${{ env.ANSIBLE_CORE_VERSION }}" docker
+
+      - name: Install Ansible collections
+        run: ansible-galaxy collection install -r collections/requirements.yml
+
+      - name: Run molecule test
+        run: molecule test
+        working-directory: rroethof.hardening
+        env:
+          PY_COLORS: '1'
+          ANSIBLE_FORCE_COLOR: '1'
+          ALLOW_BROKEN_CONDITIONALS: 1
+          MOLECULE_DISTRO: ${{ matrix.distro }}
+          DOCKER_HOST: "unix:///var/run/docker.sock"
+          ANSIBLE_REMOTE_USER: root
+          MOLECULE_NO_LOG: false

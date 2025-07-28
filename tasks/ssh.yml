@@ -1,0 +1,31 @@
+---
+- name: Harden SSH server configuration
+  become: true
+  tags:
+    - ssh
+    - hardening
+  block:
+    - name: Ensure OpenSSH server package is installed
+      ansible.builtin.package:
+        name: openssh-server
+        state: present
+
+    - name: Ensure sshd privilege separation directory exists for validation
+      ansible.builtin.file:
+        path: /run/sshd
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
+
+    - name: Disable X11 forwarding in sshd_config
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?\s*X11Forwarding'
+        line: 'X11Forwarding no'
+        owner: root
+        group: root
+        mode: '0600'
+        validate: 'sshd -t -f %s'
+      when: hardening_ssh_disable_x11_forwarding
+      notify: Restart sshd

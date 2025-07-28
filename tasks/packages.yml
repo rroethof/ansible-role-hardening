@@ -1,0 +1,30 @@
+---
+- name: Ensure GUI packages are removed
+  ansible.builtin.package:
+    name: gdm3
+    state: absent
+    purge: true
+  become: true
+  when: hardening_remove_gui
+  tags:
+    - package
+    - hardening
+
+- name: Ensure required packages are installed
+  ansible.builtin.package:
+    name: "{{ hardening_required_packages }}"
+    state: present
+  become: true
+  tags:
+    - package
+    - hardening
+
+- name: Ensure unwanted packages are removed
+  ansible.builtin.package:
+    name: "{{ hardening_unwanted_packages }}"
+    state: absent
+    purge: true
+  become: true
+  tags:
+    - package
+    - hardening

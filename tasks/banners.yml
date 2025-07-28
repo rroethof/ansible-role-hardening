@@ -1,0 +1,39 @@
+---
+- name: Configure local login warning banner (/etc/issue)
+  ansible.builtin.copy:
+    content: "{{ hardening_issue_banner_text }}\n"
+    dest: /etc/issue
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  when: hardening_manage_banners
+  tags:
+    - banner
+    - hardening
+
+- name: Configure remote login warning banner (/etc/issue.net)
+  ansible.builtin.copy:
+    content: "{{ hardening_issue_net_banner_text }}\n"
+    dest: /etc/issue.net
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  when: hardening_manage_banners
+  tags:
+    - banner
+    - hardening
+
+- name: Configure message of the day (/etc/motd)
+  ansible.builtin.copy:
+    content: "{{ hardening_motd_banner_text }}\n"
+    dest: /etc/motd
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  when: hardening_manage_banners
+  tags:
+    - banner
+    - hardening

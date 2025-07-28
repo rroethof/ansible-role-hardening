@@ -1,0 +1,49 @@
+---
+- name: Install and configure auditd
+  become: true
+  when: ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+  tags:
+    - auditd
+    - hardening
+  block:
+    - name: Install auditd and audispd-plugins packages
+      ansible.builtin.package:
+        name:
+          - auditd
+          - audispd-plugins
+        state: present
+
+    - name: Configure auditd to keep logs instead of rotating
+      ansible.builtin.lineinfile:
+        path: /etc/audit/auditd.conf
+        regexp: '^max_log_file_action\s*='
+        line: 'max_log_file_action = KEEP_LOGS'
+        owner: root
+        group: root
+        mode: '0640'
+      notify: Restart auditd
+
+    - name: Configure auditd to halt the system when logs are full
+      ansible.builtin.lineinfile:
+        path: /etc/audit/auditd.conf
+        regexp: '^admin_space_left_action\s*='
+        line: 'admin_space_left_action = HALT'
+        owner: root
+        group: root
+        mode: '0640'
+      notify: Restart auditd
+
+    - name: Ensure auditd service is enabled and started
+      ansible.builtin.systemd_service:
+        name: auditd
+        state: started
+        enabled: true
+
+    - name: Configure auditd rules
+      ansible.builtin.template:
+        src: auditd.rules.j2
+        dest: /etc/audit/rules.d/ansible-hardening.rules
+        owner: root
+        group: root
+        mode: '0640'
+      notify: Reload auditd rules

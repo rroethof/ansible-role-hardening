@@ -1,0 +1,134 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    # Default variables from the role for verification logic
+    hardening_set_grub_password: false
+    hardening_manage_banners: true
+    hardening_motd_banner_text: |
+      Authorized uses only. All activity may be monitored and reported.
+    hardening_remove_gui: true
+
+  tasks:
+
+    - name: Verify that a disabled filesystem module config exists
+      ansible.builtin.stat:
+        path: /etc/modprobe.d/cramfs.conf
+      register: cramfs_conf
+      failed_when: not cramfs_conf.stat.exists
+      when: ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+      tags:
+        - filesystem
+
+    - name: Gather mount facts
+      ansible.builtin.mount_facts:
+      tags:
+        - mount
+
+    - name: Verify that /tmp is mounted with noexec
+      ansible.builtin.assert:
+        that:
+          - item.mount == '/tmp'
+          - "'noexec' in item.options"
+        fail_msg: "/tmp is not mounted with noexec. Options are {{ item.options }}"
+        quiet: true
+      loop: "{{ ansible_mounts }}"
+      when: item.mount == '/tmp'
+      tags:
+        - mount
+
+    - name: Verify GRUB password file is absent by default
+      ansible.builtin.stat:
+        path: /etc/grub.d/01_hardening_boot_user
+      register: grub_password_file
+      failed_when: grub_password_file.stat.exists
+      when:
+        - not hardening_set_grub_password
+        - ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+      tags:
+        - bootloader
+
+    - name: Verify MOTD banner is configured
+      ansible.builtin.slurp:
+        src: /etc/motd
+      register: motd_file
+      when: hardening_manage_banners
+      tags:
+        - banner
+
+    - name: Assert MOTD content is correct
+      ansible.builtin.assert:
+        that:
+          - (motd_file.content | b64decode).strip() == hardening_motd_banner_text.strip()
+        fail_msg: "MOTD content does not match expected banner."
+        quiet: true
+      when: hardening_manage_banners
+      tags:
+        - banner
+
+    - name: Gather package facts
+      ansible.builtin.package_facts:
+        manager: auto
+      tags:
+        - package
+
+    - name: Verify GUI package is removed
+      ansible.builtin.assert:
+        that:
+          - "'gdm3' not in ansible_facts.packages"
+        fail_msg: "gdm3 package was found, but should have been removed."
+        quiet: true
+      when: hardening_remove_gui
+      tags:
+        - package
+
+    - name: Verify required packages are installed
+      ansible.builtin.assert:
+        that:
+          - "'chrony' in ansible_facts.packages"
+        fail_msg: "chrony package was not found, but should have been installed."
+        quiet: true
+      tags:
+        - package
+
+    - name: Verify unwanted packages are removed
+      ansible.builtin.assert:
+        that:
+          - "'rsync' not in ansible_facts.packages"
+          - "'ldap-utils' not in ansible_facts.packages"
+        fail_msg: "An unwanted package (rsync or ldap-utils) was found."
+        quiet: true
+      tags:
+        - package
+
+    - name: Verify that another disabled kernel module config exists
+      ansible.builtin.stat:
+        path: /etc/modprobe.d/ansible-hardening-dccp.conf
+      register: dccp_conf
+      failed_when: not dccp_conf.stat.exists
+      when: ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+      tags:
+        - kernel
+
+    - name: Verify sudo logging is configured
+      ansible.builtin.command: grep -E '^\s*Defaults\s+logfile="/var/log/sudo.log"' /etc/sudoers
+      register: sudo_logfile_check
+      changed_when: false
+      failed_when: sudo_logfile_check.rc != 0
+      tags:
+        - sudo
+
+    - name: Gather service facts for verification
+      ansible.builtin.service_facts:
+      when: ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+      tags:
+        - aide
+        - auditd
+
+    - name: Verify AIDE package is installed
+      ansible.builtin.assert:
+        that:
+          - "'aide' in ansible_facts.packages"
+      when: ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']

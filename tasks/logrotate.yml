@@ -1,0 +1,20 @@
+---
+- name: Harden logrotate configuration
+  become: true
+  tags:
+    - logrotate
+    - hardening
+  block:
+    - name: Ensure logrotate package is installed
+      ansible.builtin.package:
+        name: logrotate
+        state: present
+
+    - name: Ensure logrotate assigns appropriate permissions
+      ansible.builtin.lineinfile:
+        path: /etc/logrotate.conf
+        regexp: '^\s*create'
+        line: 'create 0640 root adm'
+        owner: root
+        group: root
+        mode: '0644'

@@ -1,0 +1,31 @@
+---
+# tasks file for hardening
+- name: Ensure /etc/modprobe.d directory exists
+  ansible.builtin.file:
+    path: /etc/modprobe.d
+    state: directory
+    mode: '0755' # Or whatever permissions are appropriate for this directory
+    owner: root
+    group: root
+
+- name: Disable and unload uncommon filesystems on non-containerized systems
+  become: true
+  when: ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+  tags:
+    - filesystem
+    - hardening
+  block:
+    - name: Ensure mounting of uncommon filesystems is disabled
+      ansible.builtin.copy:
+        dest: "/etc/modprobe.d/{{ item }}.conf"
+        content: "install {{ item }} /bin/true"
+        owner: root
+        group: root
+        mode: '0644'
+      loop: "{{ hardening_disabled_filesystems }}"
+
+    - name: Unload uncommon filesystem modules if currently loaded
+      community.general.modprobe:
+        name: "{{ item }}"
+        state: absent
+      loop: "{{ hardening_disabled_filesystems }}"

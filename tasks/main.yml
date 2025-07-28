@@ -1,0 +1,42 @@
+---
+# tasks file for hardening
+- name: Include filesystem hardening tasks
+  ansible.builtin.include_tasks: filesystems.yml
+
+- name: Include mount hardening tasks
+  ansible.builtin.include_tasks: mounts.yml
+
+- name: Include bootloader hardening tasks
+  ansible.builtin.include_tasks: bootloader.yml
+
+- name: Include AppArmor hardening tasks
+  ansible.builtin.include_tasks: apparmor.yml
+
+- name: Include banner configuration tasks
+  ansible.builtin.include_tasks: banners.yml
+
+- name: Include package hardening tasks
+  ansible.builtin.include_tasks: packages.yml
+
+- name: Include kernel module hardening tasks
+  ansible.builtin.include_tasks: kernel_modules.yml
+
+- name: Include sudo hardening tasks
+  ansible.builtin.include_tasks: sudo.yml
+
+- name: Include AIDE hardening tasks
+  ansible.builtin.include_tasks: aide.yml
+
+- name: Include auditd hardening tasks
+  ansible.builtin.include_tasks: auditd.yml
+
+- name: Include logrotate hardening tasks
+  ansible.builtin.include_tasks: logrotate.yml
+
+- name: Include cron and at hardening tasks
+  ansible.builtin.include_tasks: cron.yml
+
+- name: Include SSH hardening tasks
+  ansible.builtin.include_tasks: ssh.yml
+
+# include_tasks: services.yml

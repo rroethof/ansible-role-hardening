@@ -1,0 +1,50 @@
+---
+- name: Configure bootloader on non-containerized systems
+  become: true
+  when: ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+  tags:
+    - bootloader
+    - hardening
+  block:
+    - name: Ensure GRUB bootloader password is set when enabled
+      ansible.builtin.copy:
+        dest: /etc/grub.d/01_hardening_boot_user
+        content: |
+          #!/bin/sh -e
+          cat << EOF
+          set superusers="{{ hardening_grub_user }}"
+          password_pbkdf2 {{ hardening_grub_user }} {{ hardening_grub_password_hash }}
+          EOF
+        owner: root
+        group: root
+        mode: '0755'
+      notify: Update-grub
+      when:
+        - hardening_set_grub_password
+        - hardening_grub_password_hash is defined
+        - hardening_grub_password_hash | length > 0
+
+    - name: Ensure GRUB bootloader password is not set when disabled
+      ansible.builtin.file:
+        path: /etc/grub.d/01_hardening_boot_user
+        state: absent
+      notify: Update-grub
+      when: not hardening_set_grub_password
+
+    - name: Enable AppArmor flag in bootloader
+      ansible.builtin.lineinfile:
+        path: /etc/default/grub
+        regexp: '^(GRUB_CMDLINE_LINUX_DEFAULT="((?:(?!apparmor=1).)*))(".*)$'
+        line: '\1 apparmor=1\3'
+        backrefs: true
+      notify: Update-grub
+      when: hardening_enable_apparmor_boot | bool
+
+    - name: Enable AppArmor security module in bootloader
+      ansible.builtin.lineinfile:
+        path: /etc/default/grub
+        regexp: '^(GRUB_CMDLINE_LINUX_DEFAULT="((?:(?!security=apparmor).)*))(".*)$'
+        line: '\1 security=apparmor\3'
+        backrefs: true
+      notify: Update-grub
+      when: hardening_enable_apparmor_boot | bool

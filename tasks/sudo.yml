@@ -1,0 +1,13 @@
+---
+- name: Harden sudo configuration
+  # Using lineinfile with validate is a safe way to manage /etc/sudoers.
+  ansible.builtin.lineinfile:
+    path: /etc/sudoers
+    state: present
+    regexp: '^Defaults\s+logfile='
+    line: 'Defaults    logfile="/var/log/sudo.log"'
+    validate: 'visudo -cf %s'
+  become: true
+  tags:
+    - sudo
+    - hardening

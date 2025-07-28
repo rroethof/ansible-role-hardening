@@ -1,0 +1,22 @@
+---
+- name: Harden kernel module settings
+  become: true
+  when: ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+  tags:
+    - kernel
+    - hardening
+  block:
+    - name: Create modprobe configuration to disable unwanted kernel modules
+      ansible.builtin.copy:
+        dest: "/etc/modprobe.d/ansible-hardening-{{ item }}.conf"
+        content: "install {{ item }} /bin/true"
+        owner: root
+        group: root
+        mode: '0644'
+      loop: "{{ hardening_disabled_kernel_modules }}"
+
+    - name: Unload unwanted kernel modules if currently loaded
+      community.general.modprobe:
+        name: "{{ item }}"
+        state: absent
+      loop: "{{ hardening_disabled_kernel_modules }}"

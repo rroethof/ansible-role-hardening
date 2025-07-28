@@ -1,0 +1,38 @@
+---
+- name: Restrict cron to authorized users
+  become: true
+  tags:
+    - cron
+    - hardening
+  block:
+    - name: Ensure /etc/cron.deny is absent
+      ansible.builtin.file:
+        path: /etc/cron.deny
+        state: absent
+
+    - name: Ensure /etc/cron.allow exists and is configured
+      ansible.builtin.copy:
+        content: "{{ hardening_cron_allowed_users | join('\\n') }}\n"
+        dest: /etc/cron.allow
+        owner: root
+        group: root
+        mode: '0600'
+
+- name: Restrict at to authorized users
+  become: true
+  tags:
+    - at
+    - hardening
+  block:
+    - name: Ensure /etc/at.deny is absent
+      ansible.builtin.file:
+        path: /etc/at.deny
+        state: absent
+
+    - name: Ensure /etc/at.allow exists and is configured
+      ansible.builtin.copy:
+        content: "{{ hardening_at_allowed_users | join('\\n') }}\n"
+        dest: /etc/at.allow
+        owner: root
+        group: root
+        mode: '0600'

@@ -1,0 +1,180 @@
+---
+# defaults file for hardening
+
+# A list of kernel modules for filesystems to disable.
+# This is a security hardening measure to reduce the kernel's attack surface.
+hardening_disabled_filesystems:
+  - cramfs
+  - freevxfs
+  - jffs2
+  - hfs
+  - hfsplus
+  - squashfs
+  - udf
+
+# Whether to configure /tmp as a separate tmpfs mount with secure options.
+# This can prevent execution of binaries from /tmp.
+# Set to false if you have a custom partitioning scheme for /tmp.
+hardening_configure_tmp: true
+
+# Whether to bind mount /var/tmp to /tmp.
+# This ensures /var/tmp inherits the secure mount options of /tmp (nodev, nosuid, noexec).
+hardening_bind_var_tmp: true
+
+# Defines a list of other partitions to manage in /etc/fstab.
+# This is for advanced use cases where you have dedicated block devices.
+# The role will NOT create the source block devices; you must provision them beforehand.
+# To use this, uncomment and define the `src` for each required partition.
+hardening_partitions: []
+#  - path: /var
+#    src: '' # e.g., /dev/vg_system/lv_var or UUID=...
+#    fstype: xfs
+#    opts: defaults
+#  - path: /var/log
+#    src: '' # e.g., /dev/vg_system/lv_log
+#    fstype: xfs
+#    opts: defaults
+#  - path: /var/log/audit
+#    src: '' # e.g., /dev/vg_system/lv_audit
+#    fstype: xfs
+#    opts: defaults
+#  - path: /home
+#    src: '' # e.g., /dev/vg_system/lv_home
+#    fstype: xfs
+#    opts: nodev
+
+# Whether to set a password to protect the GRUB bootloader.
+# This also requires authentication for single-user mode.
+hardening_set_grub_password: false
+
+# The user for the GRUB bootloader password.
+hardening_grub_user: root
+
+# The hashed password for the GRUB user.
+# Generate with `grub-mkpasswd-pbkdf2` and paste the hash here.
+# This MUST be set for the password to be applied.
+hardening_grub_password_hash: ""
+
+# Whether to ensure AppArmor is enabled in the bootloader configuration.
+hardening_enable_apparmor_boot: true
+
+# Whether to set all AppArmor profiles to enforce mode.
+hardening_enforce_apparmor_profiles: true
+
+# Whether to manage login banners and message of the day (MOTD).
+hardening_manage_banners: true
+
+# Content for the local login banner.
+hardening_issue_banner_text: |
+  Authorized uses only. All activity may be monitored and reported.
+
+# Content for the remote login banner.
+hardening_issue_net_banner_text: |
+  Authorized uses only. All activity may be monitored and reported.
+
+# Content for the message of the day.
+hardening_motd_banner_text: |
+  Authorized uses only. All activity may be monitored and reported.
+
+# Whether to remove GUI-related packages from the system.
+hardening_remove_gui: true
+
+# Whether to configure systemd-timesyncd with specific NTP servers.
+hardening_configure_timesyncd: true
+
+# A list of NTP servers to configure for systemd-timesyncd.
+hardening_timesyncd_ntp_servers:
+  - "0.nl.pool.ntp.org"
+  - "1.nl.pool.ntp.org"
+
+# A list of packages that must be installed for compliance.
+hardening_required_packages:
+  - chrony
+
+# A list of packages that must be removed for compliance.
+hardening_unwanted_packages:
+  - rsync
+  - ldap-utils
+
+# A list of kernel modules to disable for security hardening.
+hardening_disabled_kernel_modules:
+  - usb-storage
+  - dccp
+  - sctp
+  - rds
+  - tipc
+
+# A list of auditd rules to be applied for security hardening.
+# These rules are based on common security benchmarks like CIS.
+hardening_auditd_rules:
+  # Time change events
+  - '-a always,exit -F arch=b64 -S adjtimex -S settimeofday -S clock_settime -k time-change'
+  - '-a always,exit -F arch=b32 -S adjtimex -S settimeofday -S stime -S clock_settime -k time-change'
+  - '-w /etc/localtime -p wa -k time-change'
+  # Identity modification events
+  - '-w /etc/group -p wa -k identity'
+  - '-w /etc/passwd -p wa -k identity'
+  - '-w /etc/gshadow -p wa -k identity'
+  - '-w /etc/shadow -p wa -k identity'
+  - '-w /etc/security/opasswd -p wa -k identity'
+  # Network environment modification events
+  - '-a always,exit -F arch=b64 -S sethostname -S setdomainname -k system-locale'
+  - '-a always,exit -F arch=b32 -S sethostname -S setdomainname -k system-locale'
+  - '-w /etc/issue -p wa -k system-locale'
+  - '-w /etc/issue.net -p wa -k system-locale'
+  - '-w /etc/hosts -p wa -k system-locale'
+  - '-w /etc/network -p wa -k system-locale'
+  - '-w /etc/networks -p wa -k system-locale'
+  # MAC policy modification events
+  - '-w /etc/apparmor/ -p wa -k MAC-policy'
+  - '-w /etc/apparmor.d/ -p wa -k MAC-policy'
+  # Login and logout events
+  - '-w /var/log/faillog -p wa -k logins'
+  - '-w /var/log/lastlog -p wa -k logins'
+  - '-w /var/log/tallylog -p wa -k logins'
+  # Session initiation events
+  - '-w /var/run/utmp -p wa -k session'
+  - '-w /var/log/wtmp -p wa -k session'
+  - '-w /var/log/btmp -p wa -k session'
+  # Discretionary Access Control (DAC) permission modification events
+  - '-a always,exit -F arch=b64 -S chmod,fchmod,fchmodat -F auid>=1000 -F auid!=-1 -k perm_mod'
+  - '-a always,exit -F arch=b32 -S chmod,fchmod,fchmodat -F auid>=1000 -F auid!=-1 -k perm_mod'
+  - '-a always,exit -F arch=b64 -S chown,fchown,fchownat,lchown -F auid>=1000 -F auid!=-1 -k perm_mod'
+  - '-a always,exit -F arch=b32 -S chown,fchown,fchownat,lchown -F auid>=1000 -F auid!=-1 -k perm_mod'
+  - '-a always,exit -F arch=b64 -S setxattr,lsetxattr,fsetxattr,removexattr,lremovexattr,fremovexattr -F auid>=1000 -F auid!=-1 -k perm_mod'
+  - '-a always,exit -F arch=b32 -S setxattr,lsetxattr,fsetxattr,removexattr,lremovexattr,fremovexattr -F auid>=1000 -F auid!=-1 -k perm_mod'
+  # Unsuccessful unauthorized file access (33115)
+  - '-a always,exit -F arch=b64 -S open,openat,open_by_handle_at -F exit=-EACCES -F auid>=1000 -F auid!=-1 -k access'
+  - '-a always,exit -F arch=b32 -S open,openat,open_by_handle_at -F exit=-EACCES -F auid>=1000 -F auid!=-1 -k access'
+  - '-a always,exit -F arch=b64 -S open,openat,open_by_handle_at -F exit=-EPERM -F auid>=1000 -F auid!=-1 -k access'
+  - '-a always,exit -F arch=b32 -S open,openat,open_by_handle_at -F exit=-EPERM -F auid>=1000 -F auid!=-1 -k access'
+  # Successful filesystem mounts (33116)
+  - '-a always,exit -F arch=b64 -S mount -F auid>=1000 -F auid!=-1 -k mounts'
+  - '-a always,exit -F arch=b32 -S mount -F auid>=1000 -F auid!=-1 -k mounts'
+  # File deletion events by users (33117)
+  - '-a always,exit -F arch=b64 -S unlink,unlinkat,rename,renameat -F auid>=1000 -F auid!=-1 -k delete'
+  - '-a always,exit -F arch=b32 -S unlink,unlinkat,rename,renameat -F auid>=1000 -F auid!=-1 -k delete'
+  # Sudoers scope changes and command execution (33118, 33119)
+  - '-w /etc/sudoers -p wa -k scope'
+  - '-w /etc/sudoers.d/ -p wa -k scope'
+  - '-w /var/log/sudo.log -p wa -k actions'
+  # Kernel module loading and unloading (33120)
+  - '-w /sbin/insmod -p x -k modules'
+  - '-w /sbin/rmmod -p x -k modules'
+  - '-w /sbin/modprobe -p x -k modules'
+  - '-a always,exit -F arch=b64 -S init_module,finit_module,delete_module -k modules'
+  - '-a always,exit -F arch=b32 -S init_module,finit_module,delete_module -k modules'
+  # Make the audit configuration immutable
+  - '-e 2'
+
+# A list of users authorized to use cron.
+hardening_cron_allowed_users:
+  - root
+
+# A list of users authorized to use at.
+hardening_at_allowed_users:
+  - root
+
+# Whether to disable X11 forwarding in the SSH server configuration.
+# This is a security best practice to prevent potential X11-based attacks.
+hardening_ssh_disable_x11_forwarding: true
