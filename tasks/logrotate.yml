@@ -1,9 +1,6 @@
 ---
 - name: Harden logrotate configuration
   become: true
-  tags:
-    - logrotate
-    - hardening
   block:
     - name: Ensure logrotate package is installed
       ansible.builtin.package:

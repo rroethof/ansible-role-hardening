@@ -1,0 +1,213 @@
+---
+- name: Manage service and client packages
+  become: true
+  when: ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+  tags:
+    - services
+    - hardening
+  block:
+    - name: Remove xinetd package
+      ansible.builtin.package:
+        name: xinetd
+        state: absent
+      when:
+        - cis_xinet_not_installed | bool
+
+    - name: Ensure chrony is installed
+      ansible.builtin.package:
+        name: chrony
+        state: present
+      when:
+        - cis_time_synchronization | bool
+
+    - name: Configure chrony servers
+      ansible.builtin.lineinfile:
+        path: /etc/chrony.conf
+        mode: "0644"
+        line: "server {{ item }}"
+      notify:
+        - restart chronyd
+      loop: "{{ cis_chrony_servers }}"
+      when:
+        - cis_time_synchronization | bool
+        - cis_chrony_servers | length > 0
+
+    - name: Configure chrony pools
+      ansible.builtin.lineinfile:
+        path: /etc/chrony.conf
+        mode: "0644"
+        line: "pool {{ item.name }} {{ item.options }}"
+      notify:
+        - restart chronyd
+      loop: "{{ cis_chrony_pools }}"
+      loop_control:
+        label: "{{ item.name }}"
+      when:
+        - cis_time_synchronization | bool
+        - cis_chrony_pools | length > 0
+
+    - name: Stop and disable rsync service
+      ansible.builtin.service:
+        name: rsyncd
+        state: stopped
+        enabled: false
+      when:
+        - cis_rsync_service_not_enabled | bool
+        - rsyncd in services
+
+    - name: Stop and disable Avahi service
+      ansible.builtin.service:
+        name: avahi-daemon
+        state: stopped
+        enabled: false
+      when:
+        - cis_avahi_server_not_enabled | bool
+        - services["avahi-daemon.service"] is defined
+
+    - name: Stop and disable SNMP service
+      ansible.builtin.service:
+        name: snmpd
+        state: stopped
+        enabled: false
+      when:
+        - cis_snmp_server_not_enabled | bool
+        - services["snmpd.service"] is defined
+
+    - name: Stop and disable Squid service
+      ansible.builtin.service:
+        name: squid
+        state: stopped
+        enabled: false
+      when:
+        - cis_http_proxy_server_not_enabled | bool
+        - services["squid.service"] is defined
+
+    - name: Stop and disable Samba service
+      ansible.builtin.service:
+        name: smb
+        state: stopped
+        enabled: false
+      when:
+        - cis_samba_server_not_enabled | bool
+        - services["smb.service"] is defined
+
+    - name: Stop and disable Dovecot service
+      ansible.builtin.service:
+        name: dovecot
+        state: stopped
+        enabled: false
+      when:
+        - cis_imap_and_pop3_server_not_enabled | bool
+        - services["dovecot.service"] is defined
+
+    - name: Stop and disable HTTP service
+      ansible.builtin.service:
+        name: httpd
+        state: stopped
+        enabled: false
+      when:
+        - cis_http_server_not_enabled | bool
+        - services["httpd.service"] is defined
+
+    - name: Stop and disable FTP service
+      ansible.builtin.service:
+        name: vsftpd
+        state: stopped
+        enabled: false
+      when:
+        - cis_ftp_server_not_enabled | bool
+        - services["vsftpd.service"] is defined
+
+    - name: Stop and disable DNS service
+      ansible.builtin.service:
+        name: named
+        state: stopped
+        enabled: false
+      when:
+        - cis_dns_server_not_enabled | bool
+        - services["named.service"] is defined
+
+    - name: Stop and disable NFS service
+      ansible.builtin.service:
+        name: nfs
+        state: stopped
+        enabled: false
+      when:
+        - cis_nfs_server_not_enabled | bool
+        - services["nfs.service"] is defined
+
+    - name: Stop and disable RPC service
+      ansible.builtin.service:
+        name: rpcbind
+        state: stopped
+        enabled: false
+      when:
+        - cis_rpc_not_enabled | bool
+        - services["rpcbind.service"] is defined
+
+    - name: Stop and disable LDAP service
+      ansible.builtin.service:
+        name: slapd
+        state: stopped
+        enabled: false
+      when:
+        - cis_ldap_server_not_enabled | bool
+        - services["slapd.service"] is defined
+
+    - name: Stop and disable DHCP service
+      ansible.builtin.service:
+        name: dhcpd
+        state: stopped
+        enabled: false
+      when:
+        - cis_dhcp_server_not_enabled | bool
+        - services["dhcpd.service"] is defined
+
+    - name: Stop and disable CUPS service
+      ansible.builtin.service:
+        name: cups
+        state: stopped
+        enabled: false
+      when:
+        - cis_cups_not_enabled | bool
+        - services["cups.service"] is defined
+
+    - name: Stop and disable NIS service
+      ansible.builtin.service:
+        name: ypserv
+        state: stopped
+        enabled: false
+      when:
+        - cis_nis_server_not_enabled | bool
+        - services["ypserv.service"] is defined
+
+    - name: Configure mail transfer agent for local-only mode
+      ansible.builtin.lineinfile:
+        path: /etc/postfix/main.cf
+        mode: "0644"
+        line: "inet_interfaces = loopback-only"
+        regexp: '^inet_interfaces'
+      when:
+        - cis_mta_local_only_mode | bool
+        - services["postfix.service"] is defined
+
+    - name: Remove NIS client package
+      ansible.builtin.package:
+        name: ypbind
+        state: absent
+      when:
+        - cis_nis_client_not_installed | bool
+
+    - name: Remove telnet client package
+      ansible.builtin.package:
+        name: telnet
+        state: absent
+      when:
+        - cis_telnet_client_not_installed | bool
+
+    - name: Remove LDAP client package
+      ansible.builtin.package:
+        name: openldap-clients
+        state: absent
+      when:
+        - cis_ldap_client_not_installed | bool

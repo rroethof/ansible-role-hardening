@@ -1,0 +1,5 @@
+---
+- name: "Ensure updates, patches, and additional security software are installed"
+  ansible.builtin.package:
+    name: "*"
+    state: latest

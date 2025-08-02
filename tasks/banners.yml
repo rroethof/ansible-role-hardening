@@ -8,9 +8,6 @@
     mode: '0644'
   become: true
   when: hardening_manage_banners
-  tags:
-    - banner
-    - hardening
 
 - name: Configure remote login warning banner (/etc/issue.net)
   ansible.builtin.copy:
@@ -21,9 +18,6 @@
     mode: '0644'
   become: true
   when: hardening_manage_banners
-  tags:
-    - banner
-    - hardening
 
 - name: Configure message of the day (/etc/motd)
   ansible.builtin.copy:
@@ -34,6 +28,3 @@
     mode: '0644'
   become: true
   when: hardening_manage_banners
-  tags:
-    - banner
-    - hardening

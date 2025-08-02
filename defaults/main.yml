@@ -62,7 +62,7 @@ hardening_enable_apparmor_boot: true
 hardening_enforce_apparmor_profiles: true
 
 # Whether to manage login banners and message of the day (MOTD).
-hardening_manage_banners: true
+hardening_manage_banners: false
 
 # Content for the local login banner.
 hardening_issue_banner_text: |

@@ -1,6 +1,6 @@
 ---
 # handlers file for hardening
-- name: Copy aide database
+- name: Copy new AIDE database
   ansible.builtin.copy:
     src: /var/lib/aide/aide.db.new.gz
     dest: /var/lib/aide/aide.db.gz
@@ -17,18 +17,23 @@
   become: true
   when: ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
 
-- name: Reload auditd rules
+- name: Reload audit rules
   ansible.builtin.command: augenrules --load
   become: true
   changed_when: true
   when: ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
-  notify: Restart auditd
 
-- name: Restart sshd
+- name: Restart SSH service
   vars:
     sshd_service_name: "{{ 'ssh' if ansible_os_family == 'Debian' else 'sshd' }}"
   ansible.builtin.systemd_service:
     name: "{{ sshd_service_name }}"
     state: restarted
   become: true
+  when: ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+
+- name: Update crypto policies
+  ansible.builtin.command: update-crypto-policies
+  become: true
+  changed_when: true
   when: ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']

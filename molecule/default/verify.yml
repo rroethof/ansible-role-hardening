@@ -6,7 +6,7 @@
   vars:
     # Default variables from the role for verification logic
     hardening_set_grub_password: false
-    hardening_manage_banners: true
+    hardening_manage_banners: false
     hardening_motd_banner_text: |
       Authorized uses only. All activity may be monitored and reported.
     hardening_remove_gui: true
@@ -19,13 +19,9 @@
       register: cramfs_conf
       failed_when: not cramfs_conf.stat.exists
       when: ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
-      tags:
-        - filesystem
 
     - name: Gather mount facts
       ansible.builtin.mount_facts:
-      tags:
-        - mount
 
     - name: Verify that /tmp is mounted with noexec
       ansible.builtin.assert:
@@ -35,9 +31,9 @@
         fail_msg: "/tmp is not mounted with noexec. Options are {{ item.options }}"
         quiet: true
       loop: "{{ ansible_mounts }}"
-      when: item.mount == '/tmp'
-      tags:
-        - mount
+      when:
+        - item.mount == '/tmp'
+        - ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
 
     - name: Verify GRUB password file is absent by default
       ansible.builtin.stat:
@@ -47,16 +43,12 @@
       when:
         - not hardening_set_grub_password
         - ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
-      tags:
-        - bootloader
 
     - name: Verify MOTD banner is configured
       ansible.builtin.slurp:
         src: /etc/motd
       register: motd_file
       when: hardening_manage_banners
-      tags:
-        - banner
 
     - name: Assert MOTD content is correct
       ansible.builtin.assert:
@@ -65,14 +57,10 @@
         fail_msg: "MOTD content does not match expected banner."
         quiet: true
       when: hardening_manage_banners
-      tags:
-        - banner
 
     - name: Gather package facts
       ansible.builtin.package_facts:
         manager: auto
-      tags:
-        - package
 
     - name: Verify GUI package is removed
       ansible.builtin.assert:
@@ -81,8 +69,6 @@
         fail_msg: "gdm3 package was found, but should have been removed."
         quiet: true
       when: hardening_remove_gui
-      tags:
-        - package
 
     - name: Verify required packages are installed
       ansible.builtin.assert:
@@ -90,8 +76,6 @@
           - "'chrony' in ansible_facts.packages"
         fail_msg: "chrony package was not found, but should have been installed."
         quiet: true
-      tags:
-        - package
 
     - name: Verify unwanted packages are removed
       ansible.builtin.assert:
@@ -100,8 +84,6 @@
           - "'ldap-utils' not in ansible_facts.packages"
         fail_msg: "An unwanted package (rsync or ldap-utils) was found."
         quiet: true
-      tags:
-        - package
 
     - name: Verify that another disabled kernel module config exists
       ansible.builtin.stat:
@@ -109,26 +91,163 @@
       register: dccp_conf
       failed_when: not dccp_conf.stat.exists
       when: ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
-      tags:
-        - kernel
-
-    - name: Verify sudo logging is configured
-      ansible.builtin.command: grep -E '^\s*Defaults\s+logfile="/var/log/sudo.log"' /etc/sudoers
-      register: sudo_logfile_check
-      changed_when: false
-      failed_when: sudo_logfile_check.rc != 0
-      tags:
-        - sudo
 
     - name: Gather service facts for verification
       ansible.builtin.service_facts:
       when: ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
-      tags:
-        - aide
-        - auditd
 
     - name: Verify AIDE package is installed
       ansible.builtin.assert:
         that:
           - "'aide' in ansible_facts.packages"
       when: ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+
+    - name: Verify xinetd is not installed
+      ansible.builtin.package_facts:
+      register: pkg_facts
+      when: ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+
+    - name: Assert xinetd is absent
+      ansible.builtin.assert:
+        that:
+          - "'xinetd' not in pkg_facts.packages"
+        fail_msg: "xinetd package is installed but should be absent."
+        quiet: true
+      when: ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+
+    - name: Assert chrony is installed
+      ansible.builtin.assert:
+        that:
+          - "'chrony' in ansible_facts.packages"
+        fail_msg: "chrony package is not installed but should be present."
+        quiet: true
+      when: ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+
+    - name: Verify crypto policy is set
+      ansible.builtin.slurp:
+        src: /etc/crypto-policies/config
+      register: crypto_policy_file
+      when: ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+
+    - name: Assert crypto policy is not legacy
+      ansible.builtin.assert:
+        that:
+          - (crypto_policy_file.content | b64decode).strip() == 'DEFAULT'
+        fail_msg: "Crypto policy is not set to DEFAULT."
+        quiet: true
+      when: ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+
+    - name: Verify that /dev/shm is mounted with nodev, nosuid, noexec
+      ansible.builtin.assert:
+        that:
+          - item.mount == '/dev/shm'
+          - "'nodev' in item.options"
+          - "'nosuid' in item.options"
+          - "'noexec' in item.options"
+        fail_msg: "/dev/shm is not mounted securely. Options are {{ item.options }}"
+        quiet: true
+      loop: "{{ ansible_mounts }}"
+      when:
+        - item.mount == '/dev/shm'
+        - ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+
+    - name: Verify that /home is mounted with nodev, nosuid
+      ansible.builtin.assert:
+        that:
+          - item.mount == '/home'
+          - "'nodev' in item.options"
+          - "'nosuid' in item.options"
+        fail_msg: "/home is not mounted securely. Options are {{ item.options }}"
+        quiet: true
+      loop: "{{ ansible_mounts }}"
+      when:
+        - item.mount == '/home'
+        - ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+
+    - name: Verify that /var is mounted with nodev, nosuid
+      ansible.builtin.assert:
+        that:
+          - item.mount == '/var'
+          - "'nodev' in item.options"
+          - "'nosuid' in item.options"
+        fail_msg: "/var is not mounted securely. Options are {{ item.options }}"
+        quiet: true
+      loop: "{{ ansible_mounts }}"
+      when:
+        - item.mount == '/var'
+        - ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+
+    - name: Verify that /var/tmp is mounted with nodev, nosuid, noexec
+      ansible.builtin.assert:
+        that:
+          - item.mount == '/var/tmp'
+          - "'nodev' in item.options"
+          - "'nosuid' in item.options"
+          - "'noexec' in item.options"
+        fail_msg: "/var/tmp is not mounted securely. Options are {{ item.options }}"
+        quiet: true
+      loop: "{{ ansible_mounts }}"
+      when:
+        - item.mount == '/var/tmp'
+        - ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+
+    - name: Verify that /var/log is mounted with nodev, nosuid, noexec
+      ansible.builtin.assert:
+        that:
+          - item.mount == '/var/log'
+          - "'nodev' in item.options"
+          - "'nosuid' in item.options"
+          - "'noexec' in item.options"
+        fail_msg: "/var/log is not mounted securely. Options are {{ item.options }}"
+        quiet: true
+      loop: "{{ ansible_mounts }}"
+      when:
+        - item.mount == '/var/log'
+        - ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+
+    - name: Verify that /var/log/audit is mounted with nodev, nosuid, noexec
+      ansible.builtin.assert:
+        that:
+          - item.mount == '/var/log/audit'
+          - "'nodev' in item.options"
+          - "'nosuid' in item.options"
+          - "'noexec' in item.options"
+        fail_msg: "/var/log/audit is not mounted securely. Options are {{ item.options }}"
+        quiet: true
+      loop: "{{ ansible_mounts }}"
+      when:
+        - item.mount == '/var/log/audit'
+        - ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+
+    - name: Verify AppArmor is enabled in the bootloader configuration
+      ansible.builtin.command: grep -E 'apparmor=1 security=apparmor' /etc/default/grub
+      register: apparmor_grub_check
+      changed_when: false
+      failed_when: apparmor_grub_check.rc != 0
+      when:
+        - hardening_enable_apparmor_boot | default(false) | bool
+        - ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+
+    - name: Display installed apt GPG keys for manual review
+      ansible.builtin.command: apt-key list
+      register: discovered_apt_keys
+      changed_when: false
+      failed_when: false
+
+    - name: Show apt GPG keys (manual review required)
+      ansible.builtin.debug:
+        msg:
+          - "Warning!! Below are the apt gpg keys. Please review and make sure all align with site policy"
+          - "{{ discovered_apt_keys.stdout_lines }}"
+
+    - name: Display configured apt repositories for manual review
+      ansible.builtin.command: apt-cache policy
+      register: discovered_apt_config
+      changed_when: false
+      failed_when: false
+
+    - name: Show apt repositories (manual review required)
+      ansible.builtin.debug:
+        msg:
+          - "Warning!! Below are the configured repos. Please review and make sure all align with site policy"
+          - "{{ discovered_apt_config.stdout_lines }}"

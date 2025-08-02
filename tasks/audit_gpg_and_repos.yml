@@ -1,0 +1,24 @@
+---
+- name: Display installed apt GPG keys for manual review
+  ansible.builtin.command: apt-key list
+  register: discovered_apt_keys
+  changed_when: false
+  failed_when: false
+
+- name: Show apt GPG keys (manual review required)
+  ansible.builtin.debug:
+    msg:
+      - "Warning!! Below are the apt gpg keys. Please review and make sure all align with site policy"
+      - "{{ discovered_apt_keys.stdout_lines }}"
+
+- name: Display configured apt repositories for manual review
+  ansible.builtin.command: apt-cache policy
+  register: discovered_apt_config
+  changed_when: false
+  failed_when: false
+
+- name: Show apt repositories (manual review required)
+  ansible.builtin.debug:
+    msg:
+      - "Warning!! Below are the configured repos. Please review and make sure all align with site policy"
+      - "{{ discovered_apt_config.stdout_lines }}"
