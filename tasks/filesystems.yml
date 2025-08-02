@@ -11,9 +11,6 @@
 - name: Disable and unload uncommon filesystems on non-containerized systems
   become: true
   when: ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
-  tags:
-    - filesystem
-    - hardening
   block:
     - name: Ensure mounting of uncommon filesystems is disabled
       ansible.builtin.copy:

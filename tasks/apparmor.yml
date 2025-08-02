@@ -5,8 +5,28 @@
   changed_when: false
   when:
     - hardening_enforce_apparmor_profiles
+    - hardening_enable_apparmor_boot | default(false)
     - ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
-  tags:
-    - apparmor
-    - hardening
-    - security
+
+- name: Ensure AppArmor is installed
+  ansible.builtin.package:
+    name:
+      - apparmor
+      - apparmor-utils
+    state: present
+  when:
+    - hardening_enforce_apparmor_profiles
+
+- name: Ensure AppArmor is enabled in the bootloader configuration
+  ansible.builtin.lineinfile:
+    path: /etc/default/grub
+    regexp: '^GRUB_CMDLINE_LINUX_DEFAULT="((?:(?!{{ item }}).)*?)"$'
+    line: GRUB_CMDLINE_LINUX_DEFAULT="\1 apparmor=1 security=apparmor"
+    backrefs: true
+  loop:
+    - apparmor=1 security=apparmor
+  when:
+    - hardening_enforce_apparmor_profiles
+    - hardening_enable_apparmor_boot | default(false)
+    - ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+  notify: Update-grub

@@ -8,6 +8,3 @@
     line: 'Defaults    logfile="/var/log/sudo.log"'
     validate: 'visudo -cf %s'
   become: true
-  tags:
-    - sudo
-    - hardening

@@ -15,10 +15,67 @@
     opts: rw,nosuid,nodev,noexec
     state: mounted
   become: true
-  when: hardening_configure_tmp
-  tags:
-    - mount
-    - hardening
+  when:
+    - hardening_configure_tmp
+    - ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+
+- name: Ensure /var/log/audit is configured as a separate partition with secure mount options
+  ansible.posix.mount:
+    path: /var/log/audit
+    src: "{{ hardening_var_log_audit_src | default('') }}"
+    fstype: "{{ hardening_var_log_audit_fstype | default('xfs') }}"
+    opts: rw,nodev,nosuid,noexec
+    state: mounted
+  become: true
+  when:
+    - hardening_var_log_audit_src is defined
+    - hardening_var_log_audit_src | length > 0
+    - ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+
+- name: Ensure /var/log/audit is present in /etc/fstab with secure options
+  ansible.builtin.lineinfile:
+    path: /etc/fstab
+    regexp: '^.+\s+/var/log/audit\s+'
+    line: '{{ hardening_var_log_audit_src | default("<device>") }} /var/log/audit {{ hardening_var_log_audit_fstype | default("xfs") }} defaults,rw,nodev,nosuid,noexec 0 2'
+    create: true
+    state: present
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  when:
+    - hardening_var_log_audit_src is defined
+    - hardening_var_log_audit_src | length > 0
+    - ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+
+- name: Ensure /var/log is configured as a separate partition with secure mount options
+  ansible.posix.mount:
+    path: /var/log
+    src: "{{ hardening_var_log_src | default('') }}"
+    fstype: "{{ hardening_var_log_fstype | default('xfs') }}"
+    opts: rw,nodev,nosuid,noexec
+    state: mounted
+  become: true
+  when:
+    - hardening_var_log_src is defined
+    - hardening_var_log_src | length > 0
+    - ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+
+- name: Ensure /var/log is present in /etc/fstab with secure options
+  ansible.builtin.lineinfile:
+    path: /etc/fstab
+    regexp: '^.+\s+/var/log\s+'
+    line: '{{ hardening_var_log_src | default("<device>") }} /var/log {{ hardening_var_log_fstype | default("xfs") }} defaults,rw,nodev,nosuid,noexec 0 2'
+    create: true
+    state: present
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  when:
+    - hardening_var_log_src is defined
+    - hardening_var_log_src | length > 0
+    - ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
 
 - name: Ensure /var/tmp is bind-mounted to /tmp for security
   ansible.posix.mount:
@@ -28,10 +85,9 @@
     opts: bind
     state: mounted
   become: true
-  when: hardening_bind_var_tmp
-  tags:
-    - mount
-    - hardening
+  when:
+    - hardening_bind_var_tmp
+    - ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
 
 - name: Ensure separate partitions are configured in /etc/fstab
   ansible.posix.mount:
@@ -45,6 +101,116 @@
   when:
     - item.src is defined
     - item.src | length > 0
-  tags:
-    - mount
-    - hardening
+    - ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+
+- name: Ensure /dev/shm is configured as a tmpfs with secure mount options
+  ansible.posix.mount:
+    path: /dev/shm
+    src: tmpfs
+    fstype: tmpfs
+    opts: rw,nosuid,nodev,noexec
+    state: mounted
+  become: true
+  when:
+    - ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+
+- name: Ensure /dev/shm is present in /etc/fstab with secure options
+  ansible.builtin.lineinfile:
+    path: /etc/fstab
+    regexp: '^tmpfs\s+/dev/shm\s+'
+    line: 'tmpfs /dev/shm tmpfs defaults,rw,nosuid,nodev,noexec 0 0'
+    create: true
+    state: present
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  when:
+    - ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+
+- name: Ensure /home is configured as a separate partition with secure mount options
+  ansible.posix.mount:
+    path: /home
+    src: "{{ hardening_home_src | default('') }}"
+    fstype: "{{ hardening_home_fstype | default('xfs') }}"
+    opts: rw,nodev,nosuid
+    state: mounted
+  become: true
+  when:
+    - hardening_home_src is defined
+    - hardening_home_src | length > 0
+    - ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+
+- name: Ensure /home is present in /etc/fstab with secure options
+  ansible.builtin.lineinfile:
+    path: /etc/fstab
+    regexp: '^.+\s+/home\s+'
+    line: '{{ hardening_home_src | default("<device>") }} /home {{ hardening_home_fstype | default("xfs") }} defaults,rw,nodev,nosuid 0 2'
+    create: true
+    state: present
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  when:
+    - hardening_home_src is defined
+    - hardening_home_src | length > 0
+    - ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+
+- name: Ensure /var is configured as a separate partition with secure mount options
+  ansible.posix.mount:
+    path: /var
+    src: "{{ hardening_var_src | default('') }}"
+    fstype: "{{ hardening_var_fstype | default('xfs') }}"
+    opts: rw,nodev,nosuid
+    state: mounted
+  become: true
+  when:
+    - hardening_var_src is defined
+    - hardening_var_src | length > 0
+    - ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+
+- name: Ensure /var is present in /etc/fstab with secure options
+  ansible.builtin.lineinfile:
+    path: /etc/fstab
+    regexp: '^.+\s+/var\s+'
+    line: '{{ hardening_var_src | default("<device>") }} /var {{ hardening_var_fstype | default("xfs") }} defaults,rw,nodev,nosuid 0 2'
+    create: true
+    state: present
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  when:
+    - hardening_var_src is defined
+    - hardening_var_src | length > 0
+    - ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+
+- name: Ensure /var/tmp is configured as a separate partition with secure mount options
+  ansible.posix.mount:
+    path: /var/tmp
+    src: "{{ hardening_var_tmp_src | default('') }}"
+    fstype: "{{ hardening_var_tmp_fstype | default('xfs') }}"
+    opts: rw,nodev,nosuid,noexec
+    state: mounted
+  become: true
+  when:
+    - hardening_var_tmp_src is defined
+    - hardening_var_tmp_src | length > 0
+    - ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+
+- name: Ensure /var/tmp is present in /etc/fstab with secure options
+  ansible.builtin.lineinfile:
+    path: /etc/fstab
+    regexp: '^.+\s+/var/tmp\s+'
+    line: '{{ hardening_var_tmp_src | default("<device>") }} /var/tmp {{ hardening_var_tmp_fstype | default("xfs") }} defaults,rw,nodev,nosuid,noexec 0 2'
+    create: true
+    state: present
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  when:
+    - hardening_var_tmp_src is defined
+    - hardening_var_tmp_src | length > 0
+    - ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']

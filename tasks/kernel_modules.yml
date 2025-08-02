@@ -2,9 +2,6 @@
 - name: Harden kernel module settings
   become: true
   when: ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
-  tags:
-    - kernel
-    - hardening
   block:
     - name: Create modprobe configuration to disable unwanted kernel modules
       ansible.builtin.copy:
