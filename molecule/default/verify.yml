@@ -108,6 +108,41 @@
           - "'aide' in ansible_facts.packages"
       when: ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
 
+    - name: Verify xinetd is not installed
+      ansible.builtin.package_facts:
+      register: pkg_facts
+      when: ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+
+    - name: Assert xinetd is absent
+      ansible.builtin.assert:
+        that:
+          - "'xinetd' not in pkg_facts.packages"
+        fail_msg: "xinetd package is installed but should be absent."
+        quiet: true
+      when: ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+
+    - name: Assert chrony is installed
+      ansible.builtin.assert:
+        that:
+          - "'chrony' in ansible_facts.packages"
+        fail_msg: "chrony package is not installed but should be present."
+        quiet: true
+      when: ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+
+    - name: Verify crypto policy is set
+      ansible.builtin.slurp:
+        src: /etc/crypto-policies/config
+      register: crypto_policy_file
+      when: ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+
+    - name: Assert crypto policy is not legacy
+      ansible.builtin.assert:
+        that:
+          - (crypto_policy_file.content | b64decode).strip() == 'DEFAULT'
+        fail_msg: "Crypto policy is not set to DEFAULT."
+        quiet: true
+      when: ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+
     - name: Verify that /dev/shm is mounted with nodev, nosuid, noexec
       ansible.builtin.assert:
         that:

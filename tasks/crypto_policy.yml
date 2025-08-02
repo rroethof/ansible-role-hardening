@@ -1,0 +1,23 @@
+---
+- name: 1.10 Ensure system-wide crypto policy is not legacy (Scored)
+  become: true
+  when:
+    - cis_crypto_policy_not_legacy | bool
+    - ansible_virtualization_type not in ['docker', 'lxc', 'podman', 'container']
+  tags:
+    - crypto
+    - hardening
+  block:
+    - name: Ensure crypto-policies-scripts package is present
+      ansible.builtin.package:
+        name: crypto-policies-scripts
+        state: present
+
+    - name: Ensure system-wide crypto policy is set
+      ansible.builtin.lineinfile:
+        path: /etc/crypto-policies/config
+        mode: "0644"
+        regexp: '^(?!#)(\S+)$'
+        line: '{{ cis_crypto_policy }}'
+        create: yes
+      notify: update-crypto-policies

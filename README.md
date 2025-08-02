@@ -20,6 +20,10 @@
 - [Ansible Role: Hardening](#ansible-role-hardening)
   - [Table of Contents](#table-of-contents)
   - [Overview](#overview)
+  - [Variable-Driven Controls](#variable-driven-controls)
+  - [Container-Aware Logic](#container-aware-logic)
+  - [Manual Audit \& Patching](#manual-audit--patching)
+  - [Example Playbook with Variables](#example-playbook-with-variables)
   - [Supported Platforms](#supported-platforms)
   - [Requirements](#requirements)
   - [Installation](#installation)
@@ -39,13 +43,19 @@
 
 ## Overview
 
-This role applies a wide range of security hardening configurations to Debian and Enterprise Linux-based systems. It is designed to be configurable and idempotent.
+This role applies a wide range of security hardening configurations to Debian and Enterprise Linux-based systems. It is designed to be configurable, idempotent, and compatible with container environments.
 
 **Key features:**
+- Variable-driven controls for all hardening logic (see `defaults/main.yml`)
+- Container-aware: tasks automatically skip or adjust for Docker, Podman, and LXC environments
+- Manual audit and patching tasks for CIS controls that require human review
+- Service hardening: disables/removes unnecessary services and clients (xinetd, X11, Avahi, SNMP, Squid, Samba, Dovecot, HTTP, FTP, DNS, NFS, RPC, LDAP, DHCP, CUPS, NIS, mail, telnet, etc.)
+- Crypto policy hardening: enforces system-wide crypto policy and ensures legacy policies are not used
 - Disabling uncommon filesystem kernel modules
 - Securing `/tmp` and `/var/tmp` with `noexec`, `nosuid`, `nodev`
-- Setting bootloader passwords and enabling AppArmor
-- Configuring security banners
+- Partition management via variables for `/var`, `/var/log`, `/var/log/audit`, `/home`, etc.
+- Setting bootloader passwords and enabling AppArmor (with variable toggles)
+- Configuring security banners (login, remote, MOTD)
 - Removing unnecessary packages (e.g., GUI)
 - Configuring and enabling `auditd` with a comprehensive set of rules
 - Restricting `cron` and `at` access to authorized users
@@ -53,6 +63,67 @@ This role applies a wide range of security hardening configurations to Debian an
 - Configuring secure `logrotate` permissions
 - Enabling AIDE for filesystem integrity checking
 - And more...
+
+---
+
+## Variable-Driven Controls
+
+All hardening logic is controlled via variables in [`defaults/main.yml`](defaults/main.yml). Example variables:
+
+```yaml
+hardening_enable_apparmor_boot: true
+hardening_enforce_apparmor_profiles: true
+hardening_configure_tmp: true
+hardening_bind_var_tmp: true
+hardening_set_grub_password: false
+hardening_remove_gui: true
+hardening_manage_banners: false
+hardening_partitions: []
+```
+
+See the defaults file for full documentation and usage notes.
+
+---
+
+## Container-Aware Logic
+
+All tasks automatically detect container environments (Docker, Podman, LXC) and skip or adjust logic as needed. This ensures safe execution in CI pipelines and ephemeral environments.
+
+---
+
+## Manual Audit & Patching
+
+Some CIS controls require manual review or patching. These are implemented as dedicated tasks (see `tasks/audit_gpg_and_repos.yml`, `tasks/update_and_patch.yml`) and can be imported or skipped as needed.
+
+---
+
+## Example Playbook with Variables
+
+```yaml
+- name: Harden system
+  hosts: all
+  become: yes
+  gather_facts: yes
+  roles:
+    - role: rroethof.hardening
+      vars:
+        hardening_enable_apparmor_boot: true
+        hardening_enforce_apparmor_profiles: true
+        hardening_configure_tmp: true
+        hardening_remove_gui: true
+        hardening_manage_banners: true
+        hardening_partitions:
+          - path: /var/log
+            src: /dev/vg_system/lv_log
+            fstype: xfs
+            opts: defaults
+        cis_xinet_not_installed: true
+        cis_time_synchronization: true
+        cis_chrony_servers:
+          - pool.ntp.org
+        cis_crypto_policy_not_legacy: true
+        cis_crypto_policy: 'DEFAULT'
+```
 
 ---
 

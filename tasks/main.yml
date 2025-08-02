@@ -46,5 +46,8 @@
 - name: Include update and patch tasks
   ansible.builtin.include_tasks: update_and_patch.yml
 
-# - name: Include service hardening tasks
-#   ansible.builtin.include_tasks: services.yml
+- name: Include service hardening tasks
+  ansible.builtin.include_tasks: services.yml
+ 
+- name: Include crypto policy hardening tasks
+  ansible.builtin.include_tasks: crypto_policy.yml
