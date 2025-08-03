@@ -1,5 +1,6 @@
 ---
 # tasks file for hardening
+
 - name: Include filesystem hardening tasks
   ansible.builtin.include_tasks: filesystems.yml
 
@@ -39,4 +40,14 @@
 - name: Include SSH hardening tasks
   ansible.builtin.include_tasks: ssh.yml
 
-# include_tasks: services.yml
+- name: Include manual audit tasks for apt GPG keys and repositories
+  ansible.builtin.include_tasks: audit_gpg_and_repos.yml
+
+- name: Include update and patch tasks
+  ansible.builtin.include_tasks: update_and_patch.yml
+
+- name: Include service hardening tasks
+  ansible.builtin.include_tasks: services.yml
+
+- name: Include crypto policy hardening tasks
+  ansible.builtin.include_tasks: crypto_policy.yml

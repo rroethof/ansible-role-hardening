@@ -1,9 +1,6 @@
 ---
 - name: Harden SSH server configuration
   become: true
-  tags:
-    - ssh
-    - hardening
   block:
     - name: Ensure OpenSSH server package is installed
       ansible.builtin.package:
@@ -28,4 +25,4 @@
         mode: '0600'
         validate: 'sshd -t -f %s'
       when: hardening_ssh_disable_x11_forwarding
-      notify: Restart sshd
+      notify: Restart SSH service
