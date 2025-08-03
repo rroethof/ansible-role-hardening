@@ -1,0 +1,8 @@
+---
+#
+# Ansible managed
+#
+repository:
+  description: Ansible role to harden linux systems.
+  homepage: https://roethof.net/
+  topics: system, security, stig, hardening, benchmark, compliance, complianceascode, debian, cis

@@ -32,7 +32,6 @@ galaxy_info:
     - benchmark
     - compliance
     - complianceascode
-    - disa
     - debian
     - cis
 collections:

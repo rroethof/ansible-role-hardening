@@ -1,12 +1,7 @@
 ---
-name: Molecule CI for non main and master branches
+name: Molecule CI for pull requests to main branches
 'on':
-  push:
-    branches:
-      - '**'
-      - '!main'
-  schedule:
-    - cron: '5 3 3 * *'
+  pull_request:
 
 env:
   PYTHON_VERSION: '3.x'

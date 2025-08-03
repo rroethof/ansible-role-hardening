@@ -26,3 +26,5 @@ Before submitting the Pull Request, please check that you have done the followin
 - [ ] I certify that I agree with the terms of the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md)
 - [ ] I have added or modified [Readme](README.md) information where applicable
 - [ ] I have added or modified [Changelog](CHANGELOG.md) information where applicable
+
+Please consider [sponsoring me](https://github.com/sponsors/rroethof).

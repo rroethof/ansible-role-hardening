@@ -32,3 +32,5 @@ Paste example playbooks or commands between quotes below
 
 ```
 HINT: You can also paste gist.github.com links for larger files
+
+Please consider [sponsoring me](https://github.com/sponsors/rroethof).

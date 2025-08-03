@@ -31,3 +31,5 @@ Paste verbatim output from "ansible --version" between quotes
 ```
 
 ```
+
+Please consider [sponsoring me](https://github.com/sponsors/rroethof).

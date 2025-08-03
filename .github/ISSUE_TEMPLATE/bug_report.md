@@ -71,3 +71,5 @@ Paste verbatim command output between quotes
 
 ```
 HINT: You can paste gist.github.com links for larger files
+
+Please consider [sponsoring me](https://github.com/sponsors/rroethof).
